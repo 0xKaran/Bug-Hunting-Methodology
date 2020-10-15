@@ -44,3 +44,6 @@
     
 ## Other sources:
 - Chrome dev tools > LightHouse
+- Github
+- [Spyse](https://spyse.com)
+- [Shodan.io](https://www.shodan.io/)
