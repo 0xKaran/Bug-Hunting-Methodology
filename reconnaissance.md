@@ -22,6 +22,10 @@
 - [Ghost](https://github.com/entynetproject/ghost) (*ADB enabled mobile finder*)
 - [httpx](https://github.com/projectdiscovery/httpx)
 - [httprobe](https://github.com/tomnomnom/httprobe) (*Check alive subdomains*)
+- WhatWeb
+- Nikto
+- Dmitry
+- Metasploit > `search banner`
 
 ## Browser Addons:
     Wappalyzer
@@ -29,6 +33,7 @@
     Library detector
     Similar Tech
     PageXray
+    Shodan
 
 ## Subdomain Enumeration
     Sublist3r
