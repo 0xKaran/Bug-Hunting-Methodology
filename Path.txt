@@ -1,0 +1,186 @@
+My Notes related to Bug Bounty from these days - Still in Progress 
+======>
+Finding all subdomains -> amass + assetfinder + findomain + subfinder + github-subdomain
+Sort and Unique mean merge them to all-subdomains.txt
+Resolve those subdomains - is ip/domain live?
+check for alive subdomains -> httpx or httprobe -> prefer httpx
+got https subdomains -> arrange with status code like 200,302,403,404,500
+visual recon on these subdomains -> gowitness, eyewitness, aquatone
+Port scans on these subdomains
+content discovery on them -> ffuf, wfuzz, dirsearch, gobuster
+google dorks + shodan dorks on interesting subdomains + GHDB + Github Dorks
+get to know what technologies the target using -> whatweb or builtwith or wappalyzer
+what server?
+what libraries
+what lang -> php, asp
+also check cookies and session to know tech and infrastructure
+what cms using?
+Grab all JS Files and enumerate it for juicy information ->
+interesting url
+intersting js library
+interesting subdomain
+interesting api
+internal ports or portals and their creds -> port scan on internal domains
+default test user creds
+db creds
+hardcoded secrets
+hidden paths
+and lots of
+Tool -> jsscanner , linkfinder, jsfinder, relative-url-extractor and lots of one liner commands , getjs
+Understand JS Code -> can get -> dom xss , Postmessage vulns, Logical Bugs, check for outdated frameworks and components
+extract js stuff ->
+echo "https://target.com | gau | grep -iE '\.js$' | httpx -status-code -mc 200 -content-type | grep 'application/javascript'
+extract API Stuff ->
+cat file.js | grep -aoP "(?<=(\"|\'|\'))\\/[a-zA-Z0-9_?&=\\/\\-\\#\\.]*(?=(\\"|\\'|\\'))" | sort -u
+Deobfuscate Javascript
+If see -> var test="  or var page=" in JS File or page source , try to append these as GET Parameters and check for bugs there
+Monitor JS Changes regularly
+Fetching URLs ->
+Time to get all URLs and parameters from those web file that is alive-hosts and do enumeration on them for vulns or other things
+waybackurls
+gau
+gf
+gospider
+hakcawler - here idea to grep things like, subdomain,url,form,javascript,robots etc
+Fetching URLs -> Might Lead to -> SSTI, XSS, SQLi, SSRF, Open Redirect, IDOR etc
+Now use github to more recon for juciy info - gwen github tools , gitrob, git-hound
+ALL SET NOW MASS HUNT FOR XSS (step by step) =>
+=========
+echo "yourtarget.com" | waybackurls | tee target.txt 
+cat target.txt | gf xss | sed 's/=.*/=/' | sed 's/URL: //' | tee targetxss.txt
+dalfox file targetxss.txt pipe
+# nuclei ->
+# find all the urls of your target & save them in a .txt file
+echo "yourtarget.com" | waybackurls | tee target.txt
+# run the .txt file with nuclei for find bugs
+nuclei -l target.txt -t /root/nuclei-templates/ -v {for use all the templats at once}
+nuclei -l target.txt -t /root/nuclei-templates/vulnerabilities -v {for finding vulnerabilities}
+nuclei -l target.txt -t /root/nuclei-templates/cves -v {for all the new cve bugs}
+# Update nuclei-templates/
+nuclei -update-templates
+Burp Collaborator Alternative - https://pingb.in
+Quickly find ssrf/open redirect ->
+gau target website -s | head -n 5000> target.txt; cat target.txt | sort -u | grep -a -i =http> redirects.txt
+One Liner Commands and other commands =>
+=============>
+# Create Custom Wordlist
+gau $1| unfurl -u keys | tee -a wordlist.txt ; gau $1 | unfurl -u paths|tee -a ends.txt; sed 's#/#\n#g' ends.txt  | sort -u | tee -a wordlist.txt | sort -u ;rm ends.txt  | sed -i -e 's/\.css\|\.png\|\.jpeg\|\.jpg\|\.svg\|\.gif\|\.wolf\|\.bmp//g' wordlist.txt
+#cat domains.txt | httprobe | xargs curl | tok | tr '[:upper:]' '[:lower:]' | sort -u | tee -a words.txt  
+# CORS Misconfiguration
+site="https://example.com"; gau "$site" | while read url;do target=$(curl -s -I -H "Origin: https://evil.com" -X GET $url) | if grep 'https://evil.com'; then [Potentional CORS Found]echo $url;else echo Nothing on "$url";fi;done
+# Extract Endpoint Form Js Files
+cat main.js | grep -oh "\"\/[a-zA-Z0-9_/?=&]*\"" | sed -e 's/^"//' -e 's/"$//' | sort -u
+# Get Ip's From Text File
+grep -E -o '(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)' $1
+# Subdomain Bruteforcer with FFUF
+ffuf -u https://FUZZ.$1 -w $2 -v | grep "| URL |" | awk '{print $4}'
+# Get Subdomains from Archive
+curl -s "http://web.archive.org/cdx/search/cdx?url=*.$1/*&output=text&fl=original&collapse=urlkey" | gsed -e 's_https*://__' -e "s/\/.*//" | sort -u
+# Get Subdomains from BufferOver.run
+curl -s https://dns.bufferover.run/dns?q=.$1 |jq -r .FDNS_A[]|cut -d',' -f2|sort -u
+# Get Subdomains from JLDC
+curl -s "https://jldc.me/anubis/subdomains/$1" | grep -Po "((http|https):\/\/)?(([\w.-]*)\.([\w]*)\.([A-z]))\w+" | sort -u
+# Extract Subdomains Form riddler.io
+curl -s "https://riddler.io/search/exportcsv?q=pld:$1" | grep -Po "(([\w.-]*)\.([\w]*)\.([A-z]))\w+" | sort -u 
+# Get Subdomains from VirusTotal
+curl -s "https://www.virustotal.com/.../domain.com/subdomains..." | grep -Po "((http|https):\/\/)?(([\w.-]*)\.([\w]*)\.([A-z]))\w+" | sort -u
+# Get Subdomains from certpostter
+curl -s "https://certspotter.com/api/v0/certs?domain=$1" | grep -Po "((http|https):\/\/)?(([\w.-]*)\.([\w]*)\.([A-z]))\w+" | sort -u
+# Get Subdomains from crt.sh
+curl -s "https://crt.sh/?q=%25.$1&output=json" | jq -r '.[].name_value' | sed 's/\*\.//g' | sort -u
+# Sort & Tested Domains from Recon.dev
+curl "https://recon.dev/api/search?key=apikey&domain=$1" |jq -r '.[].rawDomains[]' | sed 's/ //g' | sort -u |httpx -silent
+# Get Subdomains rapiddns.io
+curl -s "https://rapiddns.io/subdomain/$1?full=1#result" | grep "<td><a" | cut -d '"' -f 2 | grep http | cut -d '/' -f3 | sed 's/#results//g' | sort -u
+# JS Files Finder
+assetfinder $1 | gau|egrep -v '(.css|.png|.jpeg|.jpg|.svg|.gif|.wolf)'|while read url; do vars=$(curl -s $url | grep -Eo "var [a-zA-Zo-9_]+" |sed -e 's, 'var','"$url"?',g' -e 's/ //g'|grep -v '.js'|sed 's/.*/&=xss/g'):echo -e "\e[1;33m$url\n" "\e[1;32m$vars";done
+# Link Finder
+curl -s $1 | grep -Eo "(http|https)://[a-zA-Z0-9./?=_-]*" | sort | uniq | grep ".js" > jslinks.txt; while IFS= read link; do python linkfinder.py -i "$link" -o cli; done < jslinks.txt | grep $2 | grep -v $3 | sort -n | uniq; rm -rf jslinks.txt
+# domain-check.sh
+chaos -d domain -o dm -silent | httpx -silent | xargs -P100 -I@ gospider -c 30 -t 15 -d 4 -a -H "x-forwarded-for: 127.0.0.1" -H "User-Agent: Mozilla/5.0 (Linux; U; Android 2.2) AppleWebKit/533.1 (KHTML, like Gecko) Version/4.0 Mobile Safari/533.1" -s @ 
+===========================================================
+# Subdomain enumeration using all.txt -> 
+$ ffuf -w JHADDIX-ALL/all.txt -u "https://FUZZ.target.com/" -v | grep "| URL |" | awk '{print $4}'
+# Search subdomain using gospider ->
+$ gospider -d 0 -s "https://target.com" -c 5 -t 100 -d 5 --blacklist jpg,jpeg,gif,css,tif,tiff,png,ttf,woff,woff2,ico,pdf,svg,txt | grep -Eo '(http|https)://[^/"]+' | anew
+# Filter the valid subdomains found ->
+$ while read i; do digout=$(dig +short ${i//[$'\t\r\n ']}); if [[ ! -z $digout ]]; then echo ${i//[$'\t\r\n ']}; fi; done < target.com.txt > target.com_valid.txt
+#  python sub3num.py target.com
+```python
+#!/usr/bin/python
+from subprocess import Popen, PIPE
+import sys
+domain = sys.argv[1]
+commands = ['findomain -t '+domain+' -o;subfinder -d '+domain+' -o '+domain+'_subfinder.txt ;assetfinder --subs-only '+domain+' >> '+domain+'_assetfinder.txt;amass enum -d '+domain+' -o '+domain+'_amass.txt ;python ~/Bug-Tools/subbrute/subbrute.py '+domain+' -o '+domain+'_subbrute.txt ;python ~/Bug-Tools/Sublist3r/sublist3r.py -d '+domain+' -o '+domain+'_sublist3r.txt ;cat *.txt | sort -u >> '+domain+'_final_domains.txt ;cat '+domain+'_final_domains.txt | httpx | sort -u >> valid_subs.txt;']
+count = 0
+processes = []
+for com in commands:
+    print "Start execute commands.."
+    processes.append(Popen(com, shell=True))
+    count += 1
+    print "[OK] command "+str(count)+" running successfully."
+else:
+    print "Finish.."
+for i, process in enumerate(processes):
+    process.wait()
+    print "Command #{} finished".format(i)
+```
+========================================
+Resources =>
+https://exploitway[.]com/github-dorks-for-penetration-testing/
+https://medium.com/.../github-recon-its-really-deep...
+https://github.com/robre/scripthunter
+https://medium.com/.../how-to-look-for-js-files...
+https://blog.appsecco.com/static-analysis-of-client-side...
+============================================
+Attacking Web Servers
+=======================>
+ File inclusion
+ Command injection
+ Unrestricted upload
+ Server side request forgery
+Attacking Data stores
+=======================>
+ Sql injection
+ Xml injections
+ xpath injection
+ The XML External Entity injection (xxe)
+ entity expansion attack
+ soap injecting
+ Ldap injection
+Attacking Users
+================>
+ Html injection
+ Cross site scripting
+ Cross site request forgery
+ HTTP parameter injection
+ Click jacking
+Other attacks
+==================>
+ Subdomain takeover
+ Insecure cors
+ SMTP injection
+ Host Header attack
+ Cache poisoning attack
+ CRLF Injection
+ HTTP Request Smuggling
+ Insecure Deserialization
+ Missing SPF record
+ Type juggling
+ Php remote xdebug vulnerability
+ Using components with known vulnerabilities:
+ Race conditions
+ HTTP verb tempering
+ Insufficient Logging and Monitoring
+Attacking Authentication
+=========================>
+ Authentication Methods
+ HTTP Authentication
+ 2 factor Authentication Bypass
+ Insecure captcha
+Attacking Access control
+=========================>
+ Horizontal Access control
+ IDOR
+ Vertical Access Control
+ Context Based Access Control
